@@ -75,7 +75,10 @@ Follow the lc-hpc skill for every step on LC (connections, `lc_submit.sh`, bank 
 3. **Run**, one job per machine, submitted with the lc-hpc skill's `scripts/lc_submit.sh`:
    `lc_submit.sh <machine> <working copy>/jobs/<machine>.job`. It submits from `jobs/`, where
    the job writes `golds_<machine>_<id>.out` (ignored by git; delete it after the review).
-   The job runs `scripts/run_golds.sh <machine>` in the build directory. The tests run in place
+   The job runs `scripts/run_golds.sh <machine>` in the build directory. When the batch queue is
+   full, two debug-queue jobs can do it instead: `run_golds.sh <machine> build`, then
+   `run_golds.sh <machine> test` after it (`lc_submit.sh --after <id>`).
+   The tests run in place
    in `Tests/test_files/<test>` there; no other directory is created.
    - Configure (`cmake.sh`) and build `erf_exec` and `fcompare`.
    - Run the tests against the current gold files: `ctest_sdm.before.log`.
