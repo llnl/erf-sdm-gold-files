@@ -45,12 +45,15 @@ The CI builds `$(dirname $ERF_BUILD)/<machine>-ci`, next to the machine's own bu
 | Modules | `cmake/3.30.5 ninja/1.11.1 gcc/12.1.1` | `cmake/3.30.5 ninja/1.11.1 gcc/13.3.1 cuda/13.1.1` | `lc_env.sh`: `rocm/7.2.1 rocmcc/7.2.1-cce-21.0.2-magic cray-mpich/9.1.0`, ... |
 | Build type | Debug | RelWithDebInfo | RelWithDebInfo |
 | `amrex_fcompare` | from the build | separate CPU build (`cpu/`) | separate CPU build (`cpu/`) |
-| Launcher | `srun` | `srun` | `flux run`, one GPU per rank |
+| Launcher | `srun` | `srun` | `flux run -N 1 --exclusive --env=TMPDIR=/tmp`, one GPU per rank |
 | Unit tests | built | off: googletest does not link with gcc/13.3.1 | built |
 
 - All three: 4 MPI ranks per test (`ERF_TEST_NRANKS=4`), `ERF_TEST_ENABLE_EXTRA_SDM_TESTS=ON`,
   tolerances 5e-9 relative and 2e-10 absolute for `add_test_r` tests; `add_test_sdm` tests carry
   their own (1e-14 to 5e-12; `ParticleAdvect_AMR*_pcount` 2e-8 to 1e-7).
+- Tuolumne: ctest gives every test `TMPDIR=<its test directory>`, on NFS, where ROCm 7.2 runs
+  crash at start-up (a `spindle.*` file appears there, then a segmentation fault); the launcher
+  hands the tasks node-local `/tmp`. Without `-N 1 --exclusive` the four ranks share one GPU.
 - Dane and Matrix keep the modules of ERF's LC GitLab CI (`.gitlab/LC/jobs/<machine>.yml`), a
   stated exception to `lc_env.sh`. Tuolumne uses `lc_env.sh`, the machine's default environment.
 
