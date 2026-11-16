@@ -1,0 +1,14 @@
+#!/bin/bash
+#SBATCH -J erf_sdm_golds_dane
+#SBATCH -N 1
+#SBATCH -n 112
+#SBATCH -t 03:00:00
+#SBATCH -p pbatch
+#SBATCH -A asccasc
+#SBATCH --exclusive
+#SBATCH --export=ALL
+#SBATCH -o golds_dane_%j.out
+
+source ~/Software/lc-env/lc_env.sh || exit 1
+export OMP_NUM_THREADS=1
+bash ../scripts/run_golds.sh dane

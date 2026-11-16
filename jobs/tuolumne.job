@@ -1,0 +1,12 @@
+#!/bin/bash
+#flux: --job-name=erf_sdm_golds_tuolumne
+#flux: --output=golds_tuolumne_{{id}}.out
+#flux: --nodes=1
+#flux: --time-limit=4h
+#flux: --exclusive
+#flux: --bank=asccasc
+#flux: --queue=pbatch
+
+source ~/Software/lc-env/lc_env.sh || exit 1
+export OMP_NUM_THREADS=1
+bash ../scripts/run_golds.sh tuolumne
