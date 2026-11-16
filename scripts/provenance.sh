@@ -23,7 +23,8 @@ case ${M} in
     echo "GPU: $(nvidia-smi --query-gpu=name,driver_version --format=csv,noheader 2>&1 | sort | uniq -c | tr -s ' ' | tr '\n' ';')" ;;
   tuolumne)
     hip=$(cache CMAKE_HIP_COMPILER)
-    echo "HIP: $(basename "${hip}"): $(${hip} --version 2>&1 | head -1), arch $(cache AMReX_AMD_ARCH)"
+    if [ -n "${hip}" ]; then hv="$(basename "${hip}"): $(${hip} --version 2>&1 | head -1)"; else hv="compiled by the C++ compiler, $(hipconfig --version 2>/dev/null)"; fi
+    echo "HIP: ${hv}, arch $(cache AMReX_AMD_ARCH)"
     echo "HIP runtime of erf_exec: $(ldd "${B}/Exec/erf_exec" | grep -oE 'rocm-[0-9.]+/lib/libamdhip64[^ ]*' | head -1)"
     echo "MPI: $(${cxx} -show 2>&1 | grep -oE 'mpich/[0-9.]+' | head -1), GPU transport $(${cxx} -show 2>&1 | grep -oE 'lmpi_gtl[a-z_]*' | head -1)"
     echo "GPU driver: $(cat /sys/module/amdgpu/version 2>/dev/null || echo unknown)" ;;
