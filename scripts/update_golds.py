@@ -11,7 +11,8 @@ it does not exist yet; --all replaces every gold file that differs. For each rep
 the script prints the largest relative difference of the mesh fields (amrex_fcompare, started
 with the launcher of the test, so run the script inside a job), the particle counts, and whether
 the particle data are identical. Gold files that no test compares any more are listed, not
-deleted. Exit status 1 when a test left no plotfile.
+deleted. A test that did not finish (timeout, crash) or left a plotfile older than the last ctest
+run keeps its gold file. Exit status 1 when a test left no fresh plotfile.
 """
 import argparse
 import filecmp
@@ -58,20 +59,22 @@ def gold_tests(build, dest):
     return found
 
 
-def failed_tests(log):
-    """Names of the tests that failed in a ctest log; None if the log has no summary."""
+def last_run(log):
+    """{test: reason} of the failed tests of a ctest log and the start time of that run;
+    (None, None) if the log has no summary."""
     text = log.read_text(errors="replace")
-    if not re.search(r"tests passed, \d+ tests failed out of", text):
-        return None
-    failed, listing = set(), False
+    total = re.search(r"Total Test time \(real\) = +([\d.]+) sec", text)
+    if not re.search(r"tests passed, \d+ tests failed out of", text) or not total:
+        return None, None
+    failed, listing = {}, False
     for line in text.splitlines():
         if line.startswith("The following tests FAILED:"):
             listing = True
         elif listing:
-            m = re.match(r"^\s+\d+ - (\S+) \(", line)
+            m = re.match(r"^\s+\d+ - (\S+) \((.+)\)", line)
             if m:
-                failed.add(m.group(1))
-    return failed
+                failed[m.group(1)] = m.group(2)
+    return failed, log.stat().st_mtime - float(total.group(1))
 
 
 def mesh_difference(fcompare, gold, plt):
@@ -140,7 +143,8 @@ def main():
     dest = Path(__file__).resolve().parent.parent / args.machine
     dest.mkdir(exist_ok=True)
     tests = gold_tests(args.build, dest)
-    failed = failed_tests(args.build / "ctest_sdm.log") if (args.build / "ctest_sdm.log").exists() else None
+    log = args.build / "ctest_sdm.log"
+    failed, start = last_run(log) if log.exists() else (None, None)
     if failed is None and not args.all:
         sys.exit(f"no complete ctest summary in {args.build / 'ctest_sdm.log'}; run ctest_sdm.sh first")
 
@@ -149,12 +153,19 @@ def main():
     print(f"{'test':36s} {'status':8s} {'rel. diff':>9s} {'field':28s} {'particles (gold -> new)':26s} particle data")
     for name in sorted(tests):
         fcompare, gold, plt = tests[name]
-        if not plt.is_dir():
+        reason = (failed or {}).get(name)
+        if not (plt / "Header").is_file():
             state, line = "MISSING", f"no plotfile {plt}"
+            status = 1
+        elif start is not None and (plt / "Header").stat().st_mtime < start:
+            state, line = "OLD", f"plotfile older than the last ctest run: {plt}"
+            status = 1
+        elif reason not in (None, "Failed"):
+            state, line = "NOTDONE", f"test ended with '{reason}': gold file kept"
             status = 1
         elif not gold.exists():
             state, line = "NEW", f"{'':9s} {'':28s} {sum(particles(plt).values())}"
-        elif args.all or name in failed:
+        elif args.all or reason:
             rel, field, absolute, error = mesh_difference(fcompare, gold, plt)
             old, new = particles(gold), particles(plt)
             data = "identical" if all(same_files(gold / c, plt / c) for c in new) and old.keys() == new.keys() \

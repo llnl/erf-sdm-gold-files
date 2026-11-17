@@ -18,8 +18,9 @@ clone on LC's run file system, the one the CI builds point at (`ERF_SDM_GOLDFILE
   (`ERF_TEST_ENABLE_EXTRA_SDM_TESTS=ON`). The other Particle and SDM tests (restart and box
   parity, check scripts) need no gold file but run in the same ctest pass.
 - Machine differences come from `Tests/CTestList.cmake`: the collision tests (`SDM_Box3D_IceAgg`,
-  `SDM_Box3D_Coal_*`, `SDM_RimingShaft`) run only in CPU builds, so only on Dane, and
-  `SDM_SublimationShaft` does not run in HIP builds, so not on Tuolumne.
+  `SDM_Box3D_Coal_*`, `SDM_RimingShaft`) run only in CPU builds, so only on Dane;
+  `SDM_SublimationShaft`, and `ParticleAdvect_AMR2_pcount` outside Release builds, do not run in
+  HIP builds, so not on Tuolumne.
 - `scripts/run_golds.sh`: the update run of one machine (build, test, replace, test again).
 - `scripts/update_golds.py`: replaces the gold files of failed and new tests, reports the
   differences.
@@ -36,6 +37,9 @@ The CI builds `$(dirname $ERF_BUILD)/<machine>-ci`, next to the machine's own bu
 - `ci_env.sh` holds the modules, and `cmake.sh`, `build.sh`, `build.dnode.sh` and `ctest_sdm.sh`
   source it.
 - `ctest_sdm.sh` runs the Particle and SDM tests inside a job (`--unit` adds the SDM unit tests).
+- On Dane, `ctest_sdm.sh` gives each `srun` step only its own cores and 4 GB per rank. By default a
+  step takes the whole node, so the tests that ctest starts together queue, and the wait counts
+  against their timeouts.
 - With unit tests enabled, ctest cannot list any test until `erf_unit_tests` and
   `erf_parallel_tests` are built; `run_golds.sh` builds them.
 
@@ -91,6 +95,8 @@ Follow the lc-hpc skill for every step on LC (connections, `lc_submit.sh`, bank 
      binary; `golds_report.txt` gives, per replaced test, the largest relative difference of
      the mesh fields and its field, the particle counts, and whether the particle data are
      identical.
+   - A test that left no plotfile (`MISSING`), an older one (`OLD`) or that did not finish
+     (`NOTDONE`: timeout, crash) keeps its gold file; find the cause and run again.
    - `ctest_sdm.after.log` must pass every test, apart from the known run-to-run differences
      below.
    - Find the cause of each change. ERF: `git log <old>..<new> -- Source/Particles
