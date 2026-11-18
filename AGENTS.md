@@ -149,6 +149,9 @@ regression.
   script, no gold file). The first gold run passed all 55 tests against its own new gold files.
 - Tuolumne, November 2026 (ROCm 6.4): the same three tests diverged between two builds that
   gave bitwise identical results on Dane.
+- Matrix, November 2026 (ERF 5a8145e3f): `SDM_SineMassFlux` failed against the gold files of the
+  same run; the two runs of one executable differed in `z_velocity` by 1.3e-9 (relative), and the
+  test's tolerances are 1e-14.
 
 ## Rules
 
